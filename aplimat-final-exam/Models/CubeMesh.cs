@@ -79,5 +79,13 @@ namespace aplimat_final_exam.Models
             this.Position += this.Velocity;
             this.Acceleration *= 0;
         }
+
+        public bool isColliding(CubeMesh other)
+        {
+            return this.Position.x + this.Scale.x > other.Position.x + other.Scale.x &&
+            this.Position.x - this.Scale.x < other.Position.x - other.Scale.x &&
+            this.Position.y + this.Scale.y > other.Position.y + other.Scale.y &&
+            this.Position.y - this.Scale.y < other.Position.y - other.Scale.y;
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using aplimat_final_exam.Models;
+using aplimat_final_exam.Utilities;
 using SharpGL;
 using System;
 using System.Collections.Generic;
@@ -67,21 +68,44 @@ namespace aplimat_final_exam
         }
         #endregion
 
-
+        
         private void ManageKeyPress()
         {
 
         }
 
-        private CubeMesh myCube = new CubeMesh();
+        private CubeMesh myCube = new CubeMesh()
+        {
+            Position = new Vector3(-50,-15,0),
+            Scale = new Vector3(1,1,1)
+        };
+
+        private CubeMesh target = new CubeMesh()
+        {
+            Position = new Vector3((float)Randomizer.Gaussian(0, 20), (float)Randomizer.Generate(0, 30), 0),
+            Scale = new Vector3((float)Randomizer.Generate(1, 5), (float)Randomizer.Generate(1, 5), 0)
+        };
         private float speed = 0.1f;
         private float bulletSpeed = 3.0f;
+        private int airFrame = 0;
+
+        private Vector3 shotPower = new Vector3(0,0,0);
+        private bool onTheWay = false;
+        private Vector3 Wind = new Vector3((float)Randomizer.Generate(-0.1, 0.1), 0, 0);
+        private List<CubeMesh> bullets = new List<CubeMesh>();
 
         private CubeMesh bullet = new CubeMesh()
         {
-            Position = new Vector3(100, 100, 0)
+            Position = new Vector3(0, 0, 0)
         };
-
+        private void ResetProjectile()
+        {
+            bullet.Position = myCube.Position;
+            bullet.Velocity = new Vector3();
+            bullet.Acceleration = new Vector3();
+            onTheWay = false;
+            airFrame = 0;
+        }
         private void OpenGLControl_OpenGLDraw(object sender, SharpGL.SceneGraph.OpenGLEventArgs args)
         {
             this.Title = "APLIMAT Final Exam";
@@ -94,35 +118,85 @@ namespace aplimat_final_exam
             gl.LoadIdentity();
             gl.Translate(0.0f, 0.0f, -100.0f);
 
-            gl.Color(1.0, 0.0, 0.0);
-            myCube.Draw(gl);
-
             gl.Color(1.0, 1.0, 1.0);
             bullet.Draw(gl);
 
+            gl.Color(0.0, 0.0, 1.0);
+            myCube.Draw(gl);
+
+            gl.Color(1.0, 0.0, 0.0);
+            target.Draw(gl);
+
+            if(!onTheWay)
+            {
+                bullet.Position = myCube.Position;
+            }
+
             if (Keyboard.IsKeyDown(Key.W))
-            { 
-                myCube.ApplyForce(Vector3.Up * speed);
+            {
+                shotPower.y += 0.1f;
+                shotPower.Clamp(5, 5, 0);
             }
 
             if (Keyboard.IsKeyDown(Key.D))
             {
-                myCube.ApplyForce(Vector3.Right * speed);
+                shotPower.x += 0.1f;
+                shotPower.Clamp(5, 5, 0);
             }
 
             if (Keyboard.IsKeyDown(Key.A))
             {
-                myCube.ApplyForce(Vector3.Left * speed);
+                shotPower.x -= 0.1f;
+                shotPower.ClampMin(-5, -5, 0);
             }
             if (Keyboard.IsKeyDown(Key.S))
             {
-                myCube.ApplyForce(Vector3.Down * speed);
+                shotPower.y -= 0.1f;
+                shotPower.ClampMin(-5, -5, 0);
+            }
+
+            
+            if (airFrame > 120)
+            {
+                ResetProjectile();
             }
 
             if (Mouse.LeftButton == MouseButtonState.Pressed)
             {
-
+               
             }
+
+            if(Keyboard.IsKeyDown(Key.Space))
+            {
+                onTheWay = true;
+                bullet.ApplyForce(shotPower);
+            }
+
+            if(onTheWay)
+            {
+                bullet.ApplyGravity();
+                bullet.ApplyForce(Wind);
+                bullet.BounceYBottom(myCube.Position.y);
+                bullet.BounceXLeft(-80);
+                bullet.BounceXRight(80);
+                airFrame++;
+            }
+
+            if(bullet.Position.y <= myCube.Position.y)
+            {
+                bullet.ApplyFriction(0.5f,1);
+            }
+
+            if(target.isColliding(bullet))
+            {
+                target.Position = new Vector3((float)Randomizer.Gaussian(0, 20), (float)Randomizer.Generate(0, 30), 0);
+                target.Scale = new Vector3((float)Randomizer.Generate(1, 5), (float)Randomizer.Generate(1, 5), 0);
+            }
+            
+
+            gl.DrawText(20, 20, 1, 0, 0, "Arial", 25, "" + "Firing solution X: " + shotPower.x + " | Y: " + shotPower.y);
+            gl.DrawText(20, 45, 1, 0, 0, "Arial", 25, "" + "Loaded: " + !onTheWay);
+            gl.DrawText(20, 700, 1, 0, 0, "Arial", 25, "" + "Wind Speed: " + Wind.x + " kph");
 
             //myCube.ApplyGravity();
 
